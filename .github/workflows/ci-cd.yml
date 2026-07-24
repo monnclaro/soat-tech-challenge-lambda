@@ -1,0 +1,106 @@
+name: CI-CD
+
+on:
+  pull_request:
+    branches: [master, producao]
+  push:
+    branches: [master, producao]
+
+# AWS Academy: credenciais de sessão temporárias (expiram com o Lab), não
+# suporta OIDC nem IAM role de longa duração — ver README > "AWS Academy".
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+  AWS_DEFAULT_REGION: us-east-1
+
+jobs:
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - uses: actions/setup-dotnet@v4.3.1
+        with:
+          dotnet-version: 8.0.x
+
+      - run: dotnet restore
+      - run: dotnet build --no-restore --configuration Release
+      - run: dotnet test --no-build --configuration Release --verbosity normal
+
+      - name: Empacotar AuthFunction
+        run: |
+          mkdir -p artifacts
+          dotnet publish src/AuthFunction/AuthFunction.csproj -c Release -o publish/auth
+          cd publish/auth && zip -r ../../artifacts/auth-function.zip . && cd ../..
+
+      - name: Empacotar AuthorizerFunction
+        run: |
+          dotnet publish src/AuthorizerFunction/AuthorizerFunction.csproj -c Release -o publish/authorizer
+          cd publish/authorizer && zip -r ../../artifacts/authorizer-function.zip . && cd ../..
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lambda-packages
+          path: artifacts/*.zip
+          retention-days: 7
+
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: build-test
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/download-artifact@v4
+        with:
+          name: lambda-packages
+          path: artifacts
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - working-directory: infra
+        run: terraform init -input=false
+
+      - working-directory: infra
+        run: terraform fmt -check -recursive
+
+      - working-directory: infra
+        run: terraform validate
+
+      - working-directory: infra
+        run: |
+          terraform plan -input=false -no-color \
+            -var="lab_role_arn=${{ secrets.AWS_LAB_ROLE_ARN }}" \
+            -var="auth_function_zip=../artifacts/auth-function.zip" \
+            -var="authorizer_function_zip=../artifacts/authorizer-function.zip"
+
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: build-test
+    if: github.event_name == 'push' && github.ref_name == 'producao'
+    environment: producao
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/download-artifact@v4
+        with:
+          name: lambda-packages
+          path: artifacts
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - working-directory: infra
+        run: terraform init -input=false
+
+      - working-directory: infra
+        run: |
+          terraform apply -auto-approve -input=false \
+            -var="lab_role_arn=${{ secrets.AWS_LAB_ROLE_ARN }}" \
+            -var="auth_function_zip=../artifacts/auth-function.zip" \
+            -var="authorizer_function_zip=../artifacts/authorizer-function.zip"
