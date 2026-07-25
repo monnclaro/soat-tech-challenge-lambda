@@ -110,7 +110,7 @@ Depois do bootstrap inicial, cada repo aplica de forma independente — exceto q
 
 ## CI/CD
 
-[.github/workflows/ci-cd.yml](.github/workflows/ci-cd.yml): build + testes .NET → `dotnet publish`/zip das duas funções → `terraform plan` (PR) ou `terraform apply` (push em `producao`), reaproveitando o zip publicado como artifact do job de build. Segredos necessários: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` (do Academy, expiram com a sessão), `AWS_LAB_ROLE_ARN`.
+[.github/workflows/ci-cd.yml](.github/workflows/ci-cd.yml): build + testes .NET → `dotnet publish`/zip das duas funções → `terraform plan` (PR) ou `terraform apply` (push em `main`), reaproveitando o zip publicado como artifact do job de build. Segredos necessários: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` (do Academy, expiram com a sessão), `AWS_LAB_ROLE_ARN`.
 
 ## Links
 
