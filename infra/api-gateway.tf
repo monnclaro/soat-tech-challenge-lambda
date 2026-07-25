@@ -1,9 +1,15 @@
 # API Gateway HTTP API — roteia:
-#   POST /auth/login-cpf  → Lambda AuthFunction (público, sem authorizer)
+#   POST /auth/login-cpf  → Lambda AuthFunction (valida CPF, consulta Usuario,
+#                            emite JWT — a Function Serverless completa exigida
+#                            pelo enunciado, numa função só)
 #   ANY  /api/{proxy+}    → HTTP_PROXY para o IP público de um node do EKS
 #                            (Service NodePort, sem ALB — ver ADR "Prioridade
-#                            de custo e AWS Academy"), protegido pelo Lambda
-#                            Authorizer, que valida o JWT
+#                            de custo e AWS Academy")
+#
+# Sem Lambda Authorizer: a validação do JWT nas rotas protegidas acontece na
+# própria API (AddJwtAuthentication/[Authorize], já existente desde a Fase 1),
+# não no Gateway — um authorizer aqui seria uma segunda validação redundante,
+# não exigida pelo enunciado. Ver ADR "Sem Lambda Authorizer".
 #
 # O node só existe depois do primeiro deploy do app (repo soat-tech-challenge).
 # Na primeira aplicação deste repo, app_node_ip_ssm_parameter pode não existir
@@ -54,27 +60,8 @@ resource "aws_lambda_permission" "auth_invoke" {
   source_arn    = "${aws_apigatewayv2_api.this.execution_arn}/*/*"
 }
 
-# ── Authorizer (Lambda REQUEST, simple response) ────────────────────────
-resource "aws_apigatewayv2_authorizer" "jwt" {
-  api_id                            = aws_apigatewayv2_api.this.id
-  authorizer_type                   = "REQUEST"
-  authorizer_uri                    = aws_lambda_function.authorizer.invoke_arn
-  name                              = "soat-jwt-authorizer"
-  authorizer_payload_format_version = "2.0"
-  enable_simple_responses           = true
-  identity_sources                  = ["$request.header.Authorization"]
-  authorizer_result_ttl_in_seconds  = 30
-}
-
-resource "aws_lambda_permission" "authorizer_invoke" {
-  statement_id  = "AllowAPIGatewayInvokeAuthorizer"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.authorizer.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.this.execution_arn}/*/*"
-}
-
-# ── /api/* → node do EKS via NodePort (protegido pelo authorizer) ───────
+# ── /api/* → node do EKS via NodePort ────────────────────────────────────
+# Sem authorizer no Gateway: passa direto, a API valida o Bearer JWT sozinha.
 resource "aws_apigatewayv2_integration" "app" {
   count = local.app_node_ip != null ? 1 : 0
 
@@ -87,9 +74,7 @@ resource "aws_apigatewayv2_integration" "app" {
 resource "aws_apigatewayv2_route" "app" {
   count = local.app_node_ip != null ? 1 : 0
 
-  api_id             = aws_apigatewayv2_api.this.id
-  route_key          = "ANY /api/{proxy+}"
-  target             = "integrations/${aws_apigatewayv2_integration.app[0].id}"
-  authorization_type = "CUSTOM"
-  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "ANY /api/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.app[0].id}"
 }

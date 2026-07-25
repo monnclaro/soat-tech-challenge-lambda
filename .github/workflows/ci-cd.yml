@@ -35,11 +35,6 @@ jobs:
           dotnet publish src/AuthFunction/AuthFunction.csproj -c Release -o publish/auth
           cd publish/auth && zip -r ../../artifacts/auth-function.zip . && cd ../..
 
-      - name: Empacotar AuthorizerFunction
-        run: |
-          dotnet publish src/AuthorizerFunction/AuthorizerFunction.csproj -c Release -o publish/authorizer
-          cd publish/authorizer && zip -r ../../artifacts/authorizer-function.zip . && cd ../..
-
       - uses: actions/upload-artifact@v4
         with:
           name: lambda-packages
@@ -75,8 +70,7 @@ jobs:
         run: |
           terraform plan -input=false -no-color \
             -var="lab_role_arn=${{ secrets.AWS_LAB_ROLE_ARN }}" \
-            -var="auth_function_zip=../artifacts/auth-function.zip" \
-            -var="authorizer_function_zip=../artifacts/authorizer-function.zip"
+            -var="auth_function_zip=../artifacts/auth-function.zip"
 
   terraform-apply:
     name: Terraform Apply
@@ -102,5 +96,4 @@ jobs:
         run: |
           terraform apply -auto-approve -input=false \
             -var="lab_role_arn=${{ secrets.AWS_LAB_ROLE_ARN }}" \
-            -var="auth_function_zip=../artifacts/auth-function.zip" \
-            -var="authorizer_function_zip=../artifacts/authorizer-function.zip"
+            -var="auth_function_zip=../artifacts/auth-function.zip"

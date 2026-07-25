@@ -45,7 +45,7 @@ locals {
 }
 
 # ── Segredo JWT compartilhado ────────────────────────────────────────────
-# Autoridade do segredo é este repositório (quem emite o token dos clientes).
+# Autoridade do segredo é este repositório (quem emite o token dos usuários).
 # O app consome via /soat/{env}/jwt/secret — mesma convenção usada pelo
 # infra-database para publicar credenciais do RDS.
 resource "random_password" "jwt_secret" {

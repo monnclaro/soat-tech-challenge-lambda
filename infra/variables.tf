@@ -17,23 +17,17 @@ variable "environment" {
 variable "lab_role_arn" {
   description = <<-EOT
     ARN da role IAM já existente na conta AWS Academy (normalmente "LabRole"),
-    usada para as duas Lambdas. O Academy bloqueia criação de roles/policies
-    IAM novas, então não criamos nenhuma — só reaproveitamos esta.
+    usada pela Lambda. O Academy bloqueia criação de roles/policies IAM
+    novas, então não criamos nenhuma — só reaproveitamos esta.
   EOT
   type        = string
 }
 
-# ── Artefatos publicados pelo CI/CD antes do terraform apply ────────────────
+# ── Artefato publicado pelo CI/CD antes do terraform apply ─────────────────
 variable "auth_function_zip" {
   description = "Caminho do zip publicado pelo `dotnet lambda package` do AuthFunction."
   type        = string
   default     = "../artifacts/auth-function.zip"
-}
-
-variable "authorizer_function_zip" {
-  description = "Caminho do zip publicado pelo `dotnet lambda package` do AuthorizerFunction."
-  type        = string
-  default     = "../artifacts/authorizer-function.zip"
 }
 
 variable "jwt_expiration_hours" {

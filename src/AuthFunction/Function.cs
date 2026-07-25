@@ -25,7 +25,7 @@ public class Function
             return Response(400, new { erro = "Corpo da requisição inválido." });
         }
 
-        var repository = new ClienteRepository(LambdaConfig.BuildConnectionString());
+        var repository = new UsuarioRepository(LambdaConfig.BuildConnectionString());
         var service = new LoginCpfService(repository, LambdaConfig.JwtSecret);
 
         var resultado = await service.AutenticarAsync(body?.Cpf);
@@ -33,8 +33,8 @@ public class Function
         return resultado.Status switch
         {
             LoginCpfStatus.CpfInvalido => Response(400, new { erro = "CPF inválido." }),
-            LoginCpfStatus.NaoEncontrado => Response(404, new { erro = "Cliente não encontrado." }),
-            LoginCpfStatus.ClienteInativo => Response(403, new { erro = "Cliente inativo." }),
+            LoginCpfStatus.NaoEncontrado => Response(404, new { erro = "Usuário não encontrado." }),
+            LoginCpfStatus.UsuarioInativo => Response(403, new { erro = "Usuário inativo." }),
             LoginCpfStatus.Sucesso => Response(200, new { token = resultado.Token }),
             _ => Response(500, new { erro = "Erro inesperado." })
         };

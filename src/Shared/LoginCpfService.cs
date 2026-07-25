@@ -4,7 +4,7 @@ public enum LoginCpfStatus
 {
     CpfInvalido,
     NaoEncontrado,
-    ClienteInativo,
+    UsuarioInativo,
     Sucesso
 }
 
@@ -12,14 +12,19 @@ public record LoginCpfResult(LoginCpfStatus Status, string? Token = null);
 
 // Lógica de negócio da autenticação por CPF, isolada de Function.cs (handler
 // Lambda) para poder ser testada sem depender de API Gateway nem AWS SDK.
+//
+// Autentica Usuario (funcionário), não Cliente: esta função protege rotas
+// sensíveis da aplicação (back-office) — ver RFC 0003. O funcionário
+// continua podendo logar por email/senha também (POST /api/auth/login,
+// já existente); esta é uma segunda forma de obter o mesmo tipo de token.
 public class LoginCpfService
 {
-    private readonly IClienteRepository _clienteRepository;
+    private readonly IUsuarioRepository _usuarioRepository;
     private readonly string _jwtSecret;
 
-    public LoginCpfService(IClienteRepository clienteRepository, string jwtSecret)
+    public LoginCpfService(IUsuarioRepository usuarioRepository, string jwtSecret)
     {
-        _clienteRepository = clienteRepository;
+        _usuarioRepository = usuarioRepository;
         _jwtSecret = jwtSecret;
     }
 
@@ -28,15 +33,15 @@ public class LoginCpfService
         if (!CpfValidator.TryNormalizar(cpfBruto, out var cpf))
             return new LoginCpfResult(LoginCpfStatus.CpfInvalido);
 
-        var cliente = await _clienteRepository.BuscarPorDocumentoAsync(cpf, ct);
+        var usuario = await _usuarioRepository.BuscarPorCpfAsync(cpf, ct);
 
-        if (cliente is null)
+        if (usuario is null)
             return new LoginCpfResult(LoginCpfStatus.NaoEncontrado);
 
-        if (!cliente.Ativo)
-            return new LoginCpfResult(LoginCpfStatus.ClienteInativo);
+        if (!usuario.Ativo)
+            return new LoginCpfResult(LoginCpfStatus.UsuarioInativo);
 
-        var token = JwtService.GerarTokenCliente(cliente.Id, cliente.Nome, _jwtSecret);
+        var token = JwtService.GerarTokenUsuario(usuario.Nome, usuario.Roles, _jwtSecret);
         return new LoginCpfResult(LoginCpfStatus.Sucesso, token);
     }
 }

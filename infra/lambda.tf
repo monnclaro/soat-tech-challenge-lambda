@@ -5,7 +5,7 @@
 # (confirmado via `terraform validate`, que rejeita esse valor de runtime).
 # Ver ADR "Lambda em .NET 8 (LTS), independente da versão do app".
 #
-# IAM restrito (AWS Academy): as duas funções usam a LabRole já existente
+# IAM restrito (AWS Academy): a função usa a LabRole já existente
 # (var.lab_role_arn) em vez de uma role criada por este Terraform. A LabRole
 # do Academy já inclui as permissões equivalentes a
 # AWSLambdaBasicExecutionRole + AWSLambdaVPCAccessExecutionRole.
@@ -35,28 +35,6 @@ resource "aws_lambda_function" "auth" {
       DB_USERNAME = data.aws_ssm_parameter.db_username.value
       DB_PASSWORD = data.aws_ssm_parameter.db_password.value
       JWT_SECRET  = aws_ssm_parameter.jwt_secret.value
-    }
-  }
-}
-
-resource "aws_lambda_function" "authorizer" {
-  function_name = "soat-authorizer-${var.environment}"
-  role          = var.lab_role_arn
-
-  filename         = var.authorizer_function_zip
-  source_code_hash = filebase64sha256(var.authorizer_function_zip)
-
-  handler     = "AuthorizerFunction::SoatTechChallenge.Lambda.Authorizer.Function::FunctionHandler"
-  runtime     = "dotnet8"
-  timeout     = 5
-  memory_size = 256
-
-  # O Authorizer só valida a assinatura do JWT (CPU-bound); não precisa de
-  # acesso à VPC/RDS, então fica fora da VPC — cold start mais rápido.
-
-  environment {
-    variables = {
-      JWT_SECRET = aws_ssm_parameter.jwt_secret.value
     }
   }
 }

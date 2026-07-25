@@ -6,22 +6,20 @@ using Microsoft.IdentityModel.Tokens;
 namespace SoatTechChallenge.Lambda.Shared;
 
 // Mesmo formato de token emitido por src/Infrastructure/Security/Jwt/JwtTokenProvider.cs
-// no app: HS256, claims Name/Role, expiração em horas. O segredo é compartilhado via
-// Secrets Manager (ver SecretsManagerClient) para que o token emitido aqui seja aceito
-// pelo AddJwtAuthentication do app sem nenhuma mudança na validação existente.
+// no app para login por email/senha: HS256, claims Name + uma Role por role do
+// usuário, expiração em horas. O segredo é compartilhado via SSM Parameter Store
+// (ver LambdaConfig) para que o token emitido aqui seja aceito pelo
+// AddJwtAuthentication do app sem nenhuma mudança na validação existente — os
+// dois caminhos de login (email/senha e CPF) produzem o mesmo tipo de token.
 public static class JwtService
 {
-    public static string GerarTokenCliente(Guid clienteId, string nome, string jwtSecret, int expirationHours = 2)
+    public static string GerarTokenUsuario(string nome, IReadOnlyList<string> roles, string jwtSecret, int expirationHours = 2)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, clienteId.ToString()),
-            new(ClaimTypes.Name, nome),
-            new(ClaimTypes.Role, "Cliente")
-        };
+        var claims = new List<Claim> { new(ClaimTypes.Name, nome) };
+        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
         var token = new JwtSecurityToken(
             claims: claims,
@@ -29,29 +27,5 @@ public static class JwtService
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    public static ClaimsPrincipal? ValidarToken(string token, string jwtSecret)
-    {
-        var handler = new JwtSecurityTokenHandler();
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
-
-        var parameters = new TokenValidationParameters
-        {
-            ValidateIssuer = false,
-            ValidateAudience = false,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = key
-        };
-
-        try
-        {
-            return handler.ValidateToken(token, parameters, out _);
-        }
-        catch (SecurityTokenException)
-        {
-            return null;
-        }
     }
 }
