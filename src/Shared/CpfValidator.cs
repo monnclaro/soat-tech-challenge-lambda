@@ -19,14 +19,14 @@ public static class CpfValidator
 
         var digitos = new string(cpfBruto.Where(char.IsDigit).ToArray());
 
-        if (digitos.Length != 11 || !EhValido(digitos))
+        if (digitos.Length != 11 || !Valido(digitos))
             return false;
 
         cpfNormalizado = digitos;
         return true;
     }
 
-    private static bool EhValido(string cpf)
+    private static bool Valido(string cpf)
     {
         if (cpf.Distinct().Count() == 1)
             return false;
