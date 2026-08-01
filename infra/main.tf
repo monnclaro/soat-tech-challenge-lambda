@@ -39,24 +39,18 @@ data "aws_ssm_parameter" "db_password" {
   with_decryption = true
 }
 
+# ── Segredo JWT compartilhado ────────────────────────────────────────────
+# Autoridade do segredo é o infra-k8s, não este repositório — ver comentário
+# em soat-tech-challenge-infra-k8s/jwt.tf sobre a dependência circular entre
+# app e lambda que isso evita. Aqui só consumimos.
+data "aws_ssm_parameter" "jwt_secret" {
+  name            = "/soat/${var.environment}/jwt/secret"
+  with_decryption = true
+}
+
 locals {
   vpc_id             = data.aws_ssm_parameter.vpc_id.value
   private_subnet_ids = split(",", data.aws_ssm_parameter.private_subnet_ids.value)
-}
-
-# ── Segredo JWT compartilhado ────────────────────────────────────────────
-# Autoridade do segredo é este repositório (quem emite o token dos usuários).
-# O app consome via /soat/{env}/jwt/secret — mesma convenção usada pelo
-# infra-database para publicar credenciais do RDS.
-resource "random_password" "jwt_secret" {
-  length  = 48
-  special = false # apenas alfanumérico: evita escaping ao injetar como env var
-}
-
-resource "aws_ssm_parameter" "jwt_secret" {
-  name  = "/soat/${var.environment}/jwt/secret"
-  type  = "SecureString"
-  value = random_password.jwt_secret.result
 }
 
 # ── Rede ──────────────────────────────────────────────────────────────────
