@@ -91,10 +91,10 @@ terraform apply \
 
 Este repositório depende de parâmetros SSM publicados pelos outros três. Ordem necessária na primeira subida do ambiente:
 
-1. **infra-k8s** — cria VPC + EKS, publica `/soat/producao/network/*`.
+1. **infra-k8s** — cria VPC + EKS, publica `/soat/producao/network/*` **e o segredo JWT** (`/soat/producao/jwt/secret`) — criado ali, não aqui, justamente pra evitar uma dependência circular: o app precisa do segredo antes de existir; o lambda precisa do IP do node, que só existe depois do app. Ver `soat-tech-challenge-infra-k8s/jwt.tf`.
 2. **infra-database** — consome a VPC, cria o RDS, publica `/soat/producao/rds/*`.
-3. **app** (`soat-tech-challenge`) — faz deploy no EKS já existente, o CI/CD publica `/soat/producao/app/node-ip` (IP público de um node rodando o `soat-api`).
-4. **lambda** (este repositório) — cria o segredo JWT (`/soat/producao/jwt/secret`, consumido pelo app na próxima sincronização de config) e o API Gateway, já apontando para o node do passo 3.
+3. **app** (`soat-tech-challenge`) — faz deploy no EKS já existente, lendo o segredo JWT do SSM; o CI/CD publica `/soat/producao/app/node-ip` (IP público de um node rodando o `soat-api`).
+4. **lambda** (este repositório) — só consome: lê o segredo JWT e o IP do node do SSM, cria o API Gateway já apontando pra lá.
 
 Depois do bootstrap inicial, cada repo aplica de forma independente — exceto que um deploy da app que troque o node ativo pode exigir reaplicar este repositório (ver nota de custo acima).
 

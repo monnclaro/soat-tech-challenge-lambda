@@ -34,7 +34,7 @@ resource "aws_lambda_function" "auth" {
       DB_NAME     = data.aws_ssm_parameter.db_name.value
       DB_USERNAME = data.aws_ssm_parameter.db_username.value
       DB_PASSWORD = data.aws_ssm_parameter.db_password.value
-      JWT_SECRET  = aws_ssm_parameter.jwt_secret.value
+      JWT_SECRET  = data.aws_ssm_parameter.jwt_secret.value
     }
   }
 }
