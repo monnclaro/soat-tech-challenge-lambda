@@ -68,7 +68,10 @@ resource "aws_apigatewayv2_integration" "app" {
   api_id             = aws_apigatewayv2_api.this.id
   integration_type   = "HTTP_PROXY"
   integration_method = "ANY"
-  integration_uri    = "http://${local.app_node_ip}:${var.app_node_port}/{proxy}"
+  # {proxy+} na rota captura só o que vem depois de /api/ (ex.: "v1/ordens-servico")
+  # — o /api precisa ser reposto aqui, senão o controller (que espera o path
+  # completo "api/v1/...") devolve 404.
+  integration_uri = "http://${local.app_node_ip}:${var.app_node_port}/api/{proxy}"
 }
 
 resource "aws_apigatewayv2_route" "app" {
