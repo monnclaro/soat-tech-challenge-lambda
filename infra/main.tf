@@ -58,8 +58,10 @@ locals {
 # VPC-interno). Logs no CloudWatch continuam funcionando mesmo sem NAT — a
 # entrega de logs do Lambda não passa pela ENI anexada à VPC.
 resource "aws_security_group" "lambda" {
-  name        = "soat-lambda-${var.environment}"
-  description = "Egress do Lambda de autenticação restrito à VPC (acesso ao RDS)"
+  name = "soat-lambda-${var.environment}"
+  # A API do EC2 só aceita ASCII em GroupDescription (InvalidParameterValue
+  # se tiver acento) — sem acento de propósito, não é erro de digitação.
+  description = "Egress do Lambda de autenticacao restrito a VPC (acesso ao RDS)"
   vpc_id      = local.vpc_id
 
   egress {
