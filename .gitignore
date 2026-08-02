@@ -1,0 +1,25 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+
+# Terraform (infra/)
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/*.tfvars
+!infra/*.tfvars.example
+infra/tfplan
+infra/crash.log
+infra/override.tf
+infra/override.tf.json
+
+# Lambda package output
+*.zip
+publish/
+
+# IDE
+.vs/
+.idea/
+*.DotSettings.user
