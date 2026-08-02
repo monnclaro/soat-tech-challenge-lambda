@@ -6,6 +6,13 @@
         <Nullable>enable</Nullable>
         <AWSProjectType>Lambda</AWSProjectType>
         <RootNamespace>SoatTechChallenge.Lambda.Auth</RootNamespace>
+        <!-- Sem isso, "dotnet publish" (Class Library, sem OutputType=Exe) não
+             gera AuthFunction.runtimeconfig.json — e o runtime do Lambda, que
+             carrega a DLL via reflection pelo Handler string, precisa desse
+             arquivo pra inicializar o CLR antes de carregar o assembly.
+             Sem ele: "Error: .NET binaries for Lambda function are not
+             correctly installed... missing the required .runtimeconfig.json". -->
+        <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     </PropertyGroup>
 
     <ItemGroup>
