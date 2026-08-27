@@ -2,11 +2,11 @@ namespace SoatTechChallenge.Lambda.Shared;
 
 // Porta do algoritmo de validação de CPF de
 // src/Domain/Common/ValueObjects/CpfChecksum.cs no repositório soat-tech-challenge
-// (usado lá tanto por Cliente quanto por Usuario). Aqui valida o CPF de Usuario
-// (funcionário) — é uma cópia deliberada, não uma referência de projeto: este
-// Lambda é uma unidade de deploy independente (repositório, pipeline de CI/CD e
-// runtime Lambda próprios, com ciclo de release desacoplado do monólito) — ver
-// ADR "Split de repositórios por unidade de deploy". Se a regra de validação de
+// (usado lá tanto por Cliente quanto por Usuario). Aqui valida o CPF de Cliente
+// — é uma cópia deliberada, não uma referência de projeto: este Lambda é uma
+// unidade de deploy independente (repositório, pipeline de CI/CD e runtime
+// Lambda próprios, com ciclo de release desacoplado do monólito) — ver ADR
+// "Split de repositórios por unidade de deploy". Se a regra de validação de
 // CPF mudar, precisa mudar nos dois lugares.
 public static class CpfValidator
 {

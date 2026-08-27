@@ -1,5 +1,5 @@
 # API Gateway HTTP API — roteia:
-#   POST /auth/login-cpf  → Lambda AuthFunction (valida CPF, consulta Usuario,
+#   POST /auth/login-cpf  → Lambda AuthFunction (valida CPF, consulta Cliente,
 #                            emite JWT — a Function Serverless completa exigida
 #                            pelo enunciado, numa função só)
 #   ANY  /api/{proxy+}    → HTTP_PROXY para o IP público de um node do EKS

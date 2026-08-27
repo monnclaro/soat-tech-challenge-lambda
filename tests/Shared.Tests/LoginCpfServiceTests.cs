@@ -13,7 +13,7 @@ public class LoginCpfServiceTests
     [Fact]
     public async Task AutenticarAsync_QuandoCpfInvalido_RetornaCpfInvalido()
     {
-        var service = new LoginCpfService(new FakeUsuarioRepository(null), JwtSecret);
+        var service = new LoginCpfService(new FakeClienteRepository(null), JwtSecret);
 
         var resultado = await service.AutenticarAsync("123");
 
@@ -22,9 +22,9 @@ public class LoginCpfServiceTests
     }
 
     [Fact]
-    public async Task AutenticarAsync_QuandoUsuarioNaoExiste_RetornaNaoEncontrado()
+    public async Task AutenticarAsync_QuandoClienteNaoExiste_RetornaNaoEncontrado()
     {
-        var service = new LoginCpfService(new FakeUsuarioRepository(null), JwtSecret);
+        var service = new LoginCpfService(new FakeClienteRepository(null), JwtSecret);
 
         var resultado = await service.AutenticarAsync(CpfValido);
 
@@ -32,21 +32,21 @@ public class LoginCpfServiceTests
     }
 
     [Fact]
-    public async Task AutenticarAsync_QuandoUsuarioInativo_RetornaUsuarioInativo()
+    public async Task AutenticarAsync_QuandoClienteInativo_RetornaClienteInativo()
     {
-        var usuario = new UsuarioAuthInfo(Guid.NewGuid(), "João", Ativo: false, Roles: ["Admin"]);
-        var service = new LoginCpfService(new FakeUsuarioRepository(usuario), JwtSecret);
+        var cliente = new ClienteAuthInfo(Guid.NewGuid(), "João", Ativo: false);
+        var service = new LoginCpfService(new FakeClienteRepository(cliente), JwtSecret);
 
         var resultado = await service.AutenticarAsync(CpfValido);
 
-        Assert.Equal(LoginCpfStatus.UsuarioInativo, resultado.Status);
+        Assert.Equal(LoginCpfStatus.ClienteInativo, resultado.Status);
     }
 
     [Fact]
-    public async Task AutenticarAsync_QuandoUsuarioAtivo_RetornaSucessoComTokenComAsRoles()
+    public async Task AutenticarAsync_QuandoClienteAtivo_RetornaSucessoComTokenComRoleClienteEDocumento()
     {
-        var usuario = new UsuarioAuthInfo(Guid.NewGuid(), "João", Ativo: true, Roles: ["Admin", "Gerente"]);
-        var service = new LoginCpfService(new FakeUsuarioRepository(usuario), JwtSecret);
+        var cliente = new ClienteAuthInfo(Guid.NewGuid(), "João", Ativo: true);
+        var service = new LoginCpfService(new FakeClienteRepository(cliente), JwtSecret);
 
         var resultado = await service.AutenticarAsync(CpfValido);
 
@@ -54,20 +54,20 @@ public class LoginCpfServiceTests
         Assert.NotNull(resultado.Token);
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(resultado.Token);
-        var roles = jwt.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
 
         Assert.Equal("João", jwt.Claims.Single(c => c.Type == ClaimTypes.Name).Value);
-        Assert.Contains("Admin", roles);
-        Assert.Contains("Gerente", roles);
+        Assert.Equal("Cliente", jwt.Claims.Single(c => c.Type == ClaimTypes.Role).Value);
+        Assert.Equal(cliente.Id.ToString(), jwt.Claims.Single(c => c.Type == ClaimTypes.NameIdentifier).Value);
+        Assert.Equal(CpfValido, jwt.Claims.Single(c => c.Type == "documento").Value);
     }
 
-    private class FakeUsuarioRepository : IUsuarioRepository
+    private class FakeClienteRepository : IClienteRepository
     {
-        private readonly UsuarioAuthInfo? _usuario;
+        private readonly ClienteAuthInfo? _cliente;
 
-        public FakeUsuarioRepository(UsuarioAuthInfo? usuario) => _usuario = usuario;
+        public FakeClienteRepository(ClienteAuthInfo? cliente) => _cliente = cliente;
 
-        public Task<UsuarioAuthInfo?> BuscarPorCpfAsync(string cpf, CancellationToken ct = default) =>
-            Task.FromResult(_usuario);
+        public Task<ClienteAuthInfo?> BuscarPorDocumentoAsync(string documento, CancellationToken ct = default) =>
+            Task.FromResult(_cliente);
     }
 }

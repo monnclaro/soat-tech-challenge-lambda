@@ -5,21 +5,28 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace SoatTechChallenge.Lambda.Shared;
 
-// Mesmo formato de token emitido por src/Infrastructure/Security/Jwt/JwtTokenProvider.cs
-// no app para login por email/senha: HS256, claims Name + uma Role por role do
-// usuário, expiração em horas. O segredo é compartilhado via SSM Parameter Store
-// (ver LambdaConfig) para que o token emitido aqui seja aceito pelo
-// AddJwtAuthentication do app sem nenhuma mudança na validação existente — os
-// dois caminhos de login (email/senha e CPF) produzem o mesmo tipo de token.
+// Mesmo formato de token aceito pelo AddJwtAuthentication do app (repo
+// soat-tech-challenge): HS256, segredo compartilhado via SSM Parameter Store
+// (ver LambdaConfig e infra-k8s/jwt.tf, que é quem gera o segredo).
+//
+// Claims: Name (nome), Role ("Cliente"), e NameIdentifier + "documento" — os
+// dois últimos existem pra rotas que precisam confirmar que quem chama é
+// dono do recurso (ex.: aprovar/reprovar orçamento da própria OS, listar
+// OS pelo próprio documento) — ver OrdemServicosController no app.
 public static class JwtService
 {
-    public static string GerarTokenUsuario(string nome, IReadOnlyList<string> roles, string jwtSecret, int expirationHours = 2)
+    public static string GerarTokenCliente(Guid id, string nome, string documento, string jwtSecret, int expirationHours = 2)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var claims = new List<Claim> { new(ClaimTypes.Name, nome) };
-        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, id.ToString()),
+            new(ClaimTypes.Name, nome),
+            new(ClaimTypes.Role, "Cliente"),
+            new("documento", documento)
+        };
 
         var token = new JwtSecurityToken(
             claims: claims,
