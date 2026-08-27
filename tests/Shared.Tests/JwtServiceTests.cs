@@ -10,23 +10,25 @@ namespace Shared.Tests;
 public class JwtServiceTests
 {
     private const string JwtSecret = "chave-de-teste-com-32-caracteres!!";
+    private static readonly Guid ClienteId = Guid.NewGuid();
 
     [Fact]
-    public void GerarTokenUsuario_EmiteClaimsNomeERoles()
+    public void GerarTokenCliente_EmiteClaimsNomeRoleDocumentoENameIdentifier()
     {
-        var token = JwtService.GerarTokenUsuario("Maria", ["Admin", "Gerente"], JwtSecret);
+        var token = JwtService.GerarTokenCliente(ClienteId, "Maria", "52998224725", JwtSecret);
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
-        var roles = jwt.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
 
         Assert.Equal("Maria", jwt.Claims.Single(c => c.Type == ClaimTypes.Name).Value);
-        Assert.Equal(["Admin", "Gerente"], roles);
+        Assert.Equal("Cliente", jwt.Claims.Single(c => c.Type == ClaimTypes.Role).Value);
+        Assert.Equal(ClienteId.ToString(), jwt.Claims.Single(c => c.Type == ClaimTypes.NameIdentifier).Value);
+        Assert.Equal("52998224725", jwt.Claims.Single(c => c.Type == "documento").Value);
     }
 
     [Fact]
-    public void GerarTokenUsuario_AssinaComOSegredoInformado()
+    public void GerarTokenCliente_AssinaComOSegredoInformado()
     {
-        var token = JwtService.GerarTokenUsuario("Maria", ["Admin"], JwtSecret);
+        var token = JwtService.GerarTokenCliente(ClienteId, "Maria", "52998224725", JwtSecret);
 
         var handler = new JwtSecurityTokenHandler();
         var parameters = new TokenValidationParameters
@@ -43,9 +45,9 @@ public class JwtServiceTests
     }
 
     [Fact]
-    public void GerarTokenUsuario_AssinadoComSegredoDiferente_FalhaNaValidacao()
+    public void GerarTokenCliente_AssinadoComSegredoDiferente_FalhaNaValidacao()
     {
-        var token = JwtService.GerarTokenUsuario("Maria", ["Admin"], JwtSecret);
+        var token = JwtService.GerarTokenCliente(ClienteId, "Maria", "52998224725", JwtSecret);
 
         var handler = new JwtSecurityTokenHandler();
         var parameters = new TokenValidationParameters
@@ -61,9 +63,9 @@ public class JwtServiceTests
     }
 
     [Fact]
-    public void GerarTokenUsuario_QuandoExpirationHoursNegativo_GeraTokenJaExpirado()
+    public void GerarTokenCliente_QuandoExpirationHoursNegativo_GeraTokenJaExpirado()
     {
-        var token = JwtService.GerarTokenUsuario("Maria", ["Admin"], JwtSecret, expirationHours: -1);
+        var token = JwtService.GerarTokenCliente(ClienteId, "Maria", "52998224725", JwtSecret, expirationHours: -1);
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 

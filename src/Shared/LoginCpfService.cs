@@ -4,7 +4,7 @@ public enum LoginCpfStatus
 {
     CpfInvalido,
     NaoEncontrado,
-    UsuarioInativo,
+    ClienteInativo,
     Sucesso
 }
 
@@ -13,18 +13,18 @@ public record LoginCpfResult(LoginCpfStatus Status, string? Token = null);
 // Lógica de negócio da autenticação por CPF, isolada de Function.cs (handler
 // Lambda) para poder ser testada sem depender de API Gateway nem AWS SDK.
 //
-// Autentica Usuario (funcionário), não Cliente: esta função protege rotas
-// sensíveis da aplicação (back-office) — ver RFC 0003. O funcionário
-// continua podendo logar por email/senha também (POST /api/auth/login,
-// já existente); esta é uma segunda forma de obter o mesmo tipo de token.
+// Autentica Cliente (não Usuario): o token só abre as rotas que fazem
+// sentido pro cliente da oficina (consultar as próprias OS, aprovar/
+// reprovar o próprio orçamento) — ver RFC 0003 e OrdemServicosController no
+// app. Funcionário continua logando por email/senha, sem relação com isto.
 public class LoginCpfService
 {
-    private readonly IUsuarioRepository _usuarioRepository;
+    private readonly IClienteRepository _clienteRepository;
     private readonly string _jwtSecret;
 
-    public LoginCpfService(IUsuarioRepository usuarioRepository, string jwtSecret)
+    public LoginCpfService(IClienteRepository clienteRepository, string jwtSecret)
     {
-        _usuarioRepository = usuarioRepository;
+        _clienteRepository = clienteRepository;
         _jwtSecret = jwtSecret;
     }
 
@@ -33,15 +33,15 @@ public class LoginCpfService
         if (!CpfValidator.TryNormalizar(cpfBruto, out var cpf))
             return new LoginCpfResult(LoginCpfStatus.CpfInvalido);
 
-        var usuario = await _usuarioRepository.BuscarPorCpfAsync(cpf, ct);
+        var cliente = await _clienteRepository.BuscarPorDocumentoAsync(cpf, ct);
 
-        if (usuario is null)
+        if (cliente is null)
             return new LoginCpfResult(LoginCpfStatus.NaoEncontrado);
 
-        if (!usuario.Ativo)
-            return new LoginCpfResult(LoginCpfStatus.UsuarioInativo);
+        if (!cliente.Ativo)
+            return new LoginCpfResult(LoginCpfStatus.ClienteInativo);
 
-        var token = JwtService.GerarTokenUsuario(usuario.Nome, usuario.Roles, _jwtSecret);
+        var token = JwtService.GerarTokenCliente(cliente.Id, cliente.Nome, cpf, _jwtSecret);
         return new LoginCpfResult(LoginCpfStatus.Sucesso, token);
     }
 }

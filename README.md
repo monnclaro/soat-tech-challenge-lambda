@@ -4,11 +4,11 @@
 
 ## Propósito
 
-Uma AWS Lambda function + um API Gateway HTTP API que expõem uma segunda forma de login para proteger as rotas sensíveis do back-office da oficina:
+Uma AWS Lambda function + um API Gateway HTTP API que expõem o login do cliente da oficina por CPF:
 
-- **AuthFunction** (`POST /auth/login-cpf`): valida o CPF informado, consulta existência/status (`Usuario.Ativo`) diretamente no RDS e devolve um JWT — a Function Serverless completa exigida pelo enunciado ("validar o CPF, consultar existência/status, gerar e devolver um token"), numa função só. Quem autentica aqui é `Usuario` (funcionário da oficina), não `Cliente`: o objetivo é proteger rotas sensíveis do back-office, e é o `Usuario` que precisa dessa segunda forma de login.
+- **AuthFunction** (`POST /auth/login-cpf`): valida o CPF informado, consulta existência/status (`Cliente.Ativo`) diretamente no RDS e devolve um JWT — a Function Serverless completa exigida pelo enunciado ("validar o CPF, consultar existência/status, gerar e devolver um token"), numa função só. Quem autentica aqui é `Cliente`, não `Usuario`: o token emitido só abre as rotas que fazem sentido pro cliente (consultar as próprias ordens de serviço, aprovar/reprovar o próprio orçamento) — funcionário continua logando por email/senha, sem relação com isto.
 
-O token emitido aqui usa o **mesmo formato** aceito pelo `AddJwtAuthentication` do app principal (claims `Name`/`Role`, HS256) e a **mesma role** (`Admin`) — o login por CPF é uma segunda porta de entrada que coexiste com o login por email/senha já existente (`POST /api/auth/login`), não o substitui. A validação do token nas rotas protegidas acontece na própria API (já existente desde a Fase 1) — não há Lambda Authorizer neste repositório: seria uma segunda validação redundante do mesmo JWT, não exigida pelo enunciado.
+O token emitido aqui usa o **mesmo formato** aceito pelo `AddJwtAuthentication` do app principal (claims `Name`/`Role`, HS256), com role `Cliente` — diferente da role `Admin` usada pelo login de `Usuario`. Além de `Name`/`Role`, o token carrega `NameIdentifier` (Id do cliente) e uma claim customizada `documento` — usados pelo app pra confirmar que quem chama é dono do recurso antes de deixar aprovar/reprovar orçamento ou listar ordens de serviço de outro cliente (ver `OrdemServicosController` no app, e [RFC 0003](https://github.com/monnclaro/soat-tech-challenge/blob/main/docs/rfcs/0003-estrategia-de-autenticacao.md)). A validação do token nas rotas protegidas acontece na própria API (já existente desde a Fase 1) — não há Lambda Authorizer neste repositório: seria uma segunda validação redundante do mesmo JWT, não exigida pelo enunciado.
 
 ## Tecnologias
 
@@ -33,7 +33,7 @@ Sem Secrets Manager (troca por SSM `SecureString`, grátis), sem IAM role própr
 ## Arquitetura
 
 ```
-Funcionário (via app/terminal da oficina)
+Cliente da oficina
      │
      ▼
 ┌─────────────────────────── API Gateway (HTTP API) ───────────────────────────┐
@@ -45,7 +45,7 @@ Funcionário (via app/terminal da oficina)
 │  │AuthFunction│                          IP público do node EKS:NodePort      │
 │  └─────┬─────┘                          → soat-api (valida o JWT sozinha)     │
 │        │ valida CPF, consulta                                                 │
-│        │ Usuario no RDS, gera JWT                                             │
+│        │ Cliente no RDS, gera JWT                                             │
 │        ▼                                                                      │
 │  SSM SecureString (jwt secret)                                                │
 │  RDS (infra-database)                                                         │
@@ -58,7 +58,7 @@ Diagrama de sequência completo do fluxo de autenticação: [soat-tech-challenge
 
 ```
 src/
-├── Shared/              ← CpfValidator, JwtService, UsuarioRepository, LoginCpfService (lógica testável)
+├── Shared/              ← CpfValidator, JwtService, ClienteRepository, LoginCpfService (lógica testável)
 └── AuthFunction/         ← handler Lambda (POST /auth/login-cpf)
 tests/Shared.Tests/       ← testes unitários da lógica de autenticação (sem depender de AWS)
 infra/                    ← Terraform: Lambda, API Gateway
