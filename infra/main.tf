@@ -26,10 +26,6 @@ data "aws_ssm_parameter" "db_port" {
   name = "/soat/${var.environment}/rds/port"
 }
 
-data "aws_ssm_parameter" "db_name" {
-  name = "/soat/${var.environment}/rds/db-name"
-}
-
 data "aws_ssm_parameter" "db_username" {
   name = "/soat/${var.environment}/rds/username"
 }
