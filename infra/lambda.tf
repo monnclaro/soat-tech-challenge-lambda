@@ -31,7 +31,12 @@ resource "aws_lambda_function" "auth" {
     variables = {
       DB_HOST     = data.aws_ssm_parameter.db_endpoint.value
       DB_PORT     = data.aws_ssm_parameter.db_port.value
-      DB_NAME     = data.aws_ssm_parameter.db_name.value
+      # Banco lógico fixo, não o parâmetro genérico /rds/db-name (que aponta
+      # pro banco inicial da instância RDS, não usado por nenhum serviço) -
+      # mesmo nome que o OS Service hardcoda na própria connection string
+      # (ver os-service/.github/workflows/ci-cd.yml), já que é lá que a
+      # tabela Cliente de fato existe.
+      DB_NAME     = "soat_os"
       DB_USERNAME = data.aws_ssm_parameter.db_username.value
       DB_PASSWORD = data.aws_ssm_parameter.db_password.value
       JWT_SECRET  = data.aws_ssm_parameter.jwt_secret.value
