@@ -29,8 +29,8 @@ resource "aws_lambda_function" "auth" {
 
   environment {
     variables = {
-      DB_HOST     = data.aws_ssm_parameter.db_endpoint.value
-      DB_PORT     = data.aws_ssm_parameter.db_port.value
+      DB_HOST = data.aws_ssm_parameter.db_endpoint.value
+      DB_PORT = data.aws_ssm_parameter.db_port.value
       # Banco lógico fixo, não o parâmetro genérico /rds/db-name (que aponta
       # pro banco inicial da instância RDS, não usado por nenhum serviço) -
       # mesmo nome que o OS Service hardcoda na própria connection string
